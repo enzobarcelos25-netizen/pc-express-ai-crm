@@ -43,6 +43,7 @@ Deploy em producao:
 - API Vercel em `/api/leads` para sincronizar leads com Supabase, n8n, Google Sheets e WhatsApp Cloud API.
 - Captura publica automatica em `/api/cron-capture`, agendada no `vercel.json`.
 - Tela `Automacao` para checar integracoes e rodar captura de teste.
+- Tela `Cockpit` para importar CSV de leads, montar fila de WhatsApp e controlar cadencia localmente.
 - Design responsivo.
 - Assets reais da loja usados como prova social.
 
@@ -66,6 +67,10 @@ curl -X POST https://pc-express-ai-crm.vercel.app/api/leads \
 ```
 
 Para Google Sheets, use o arquivo `google-apps-script-webhook.js` em uma planilha publicada como Web App e configure a URL como `GOOGLE_APPS_SCRIPT_URL`.
+
+## Cockpit de venda
+
+A tela `Cockpit` nao embute telefones no deploy. Importe o CSV `ataque-hoje-telefone-pronto.csv` no navegador para carregar a fila. Os dados ficam no `localStorage` do navegador, com mensagem pronta, link para WhatsApp, controle de enviado/pulado e cadencia de 6 minutos.
 
 ## Stack
 
