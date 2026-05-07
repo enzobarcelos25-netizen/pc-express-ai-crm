@@ -1,139 +1,104 @@
 # PC Express AI CRM
 
-Landing page + diagnostico inteligente + mini CRM para a **PC Express**, loja de solucoes em TI focada em formatacao, otimizacao, limpeza, upgrades e atendimento rapido via WhatsApp.
+<p align="center">
+  <strong>Landing page, diagnostico inteligente e mini CRM para captacao de clientes da PC Express.</strong>
+</p>
 
-![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=111)
-![Vite](https://img.shields.io/badge/Vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=fff)
-![JavaScript](https://img.shields.io/badge/JavaScript-ESM-F7DF1E?style=for-the-badge&logo=javascript&logoColor=111)
-![Vercel](https://img.shields.io/badge/Deploy-Vercel-000?style=for-the-badge&logo=vercel)
+<p align="center">
+  <a href="https://pc-express-ai-crm.vercel.app/">Demo em producao</a>
+</p>
 
-## Visao Geral
+<p align="center">
+  <img src="https://img.shields.io/badge/React-19-111?style=for-the-badge&logo=react" alt="React" />
+  <img src="https://img.shields.io/badge/Vite-7-111?style=for-the-badge&logo=vite" alt="Vite" />
+  <img src="https://img.shields.io/badge/JavaScript-ESM-111?style=for-the-badge&logo=javascript" alt="JavaScript" />
+  <img src="https://img.shields.io/badge/Vercel-Deploy-111?style=for-the-badge&logo=vercel" alt="Vercel" />
+</p>
 
-O projeto transforma a captacao manual de clientes de manutencao de computadores em uma experiencia digital simples:
+## Visao geral
 
-- O visitante chega pela landing page.
-- Ve oferta, servicos e provas sociais reais da loja.
-- Faz um diagnostico guiado sobre o problema do PC.
-- Recebe uma recomendacao automatica.
-- E direcionado para o WhatsApp com mensagem pronta.
-- O lead fica salvo no painel admin via LocalStorage.
+O PC Express AI CRM nasceu para resolver um problema real: transformar visitantes e contatos frios em leads organizados para uma loja de servicos de TI.
 
-## Demo
+O app junta uma pagina comercial, um diagnostico guiado de problemas de computador, captura de lead, painel admin, automacoes e um cockpit de WhatsApp para trabalhar oportunidades de venda.
 
-Deploy em producao:
+## Fluxo do produto
 
-[https://pc-express-ai-crm.vercel.app](https://pc-express-ai-crm.vercel.app)
+```txt
+Visitante acessa a landing page
+  -> responde o diagnostico
+  -> recebe uma recomendacao automatica
+  -> abre o WhatsApp com mensagem pronta
+  -> lead fica salvo no CRM
+  -> automacoes podem enviar dados para Supabase, n8n, Sheets e WhatsApp Cloud API
+```
 
 ## Funcionalidades
 
 - Landing page comercial para a PC Express.
-- CTA direto para WhatsApp: `(34) 98403-3975`.
-- Diagnostico rule-based para problemas comuns:
-  - PC lento
-  - HD / SSD
-  - Travamentos
-  - Virus e pop-ups
-  - Office
-  - Uso basico, trabalho ou jogos
-- Resultado com problema detectado e solucao recomendada.
-- Mensagem automatica para WhatsApp.
-- Painel admin com leads.
-- Status do lead: `novo`, `contato`, `fechado`.
+- CTA direto para WhatsApp.
+- Diagnostico rule-based para PC lento, HD/SSD, travamentos, virus, Office e uso principal.
+- Resultado com problema detectado, explicacao e solucao recomendada.
 - Persistencia local com `localStorage`.
-- API Vercel em `/api/leads` para sincronizar leads com Supabase, n8n, Google Sheets e WhatsApp Cloud API.
-- Captura publica automatica em `/api/cron-capture`, agendada no `vercel.json`.
-- Tela `Automacao` para checar integracoes e rodar captura de teste.
-- Tela `Cockpit` com Modo Venda Hoje, ponte local automatica, anti-repeticao, funil comercial e follow-ups assistidos.
-- Design responsivo.
-- Assets reais da loja usados como prova social.
+- Painel admin com leads e status.
+- API `/api/leads` preparada para sincronizar com servicos externos.
+- API `/api/health` para checagem das integracoes configuradas.
+- API `/api/cron-capture` para captacao automatica em cron da Vercel.
+- Tela de automacao para testar integracoes.
+- Cockpit de WhatsApp com fila, cadencia, follow-ups e status comercial.
+- Assets reais da PC Express usados como prova social.
 
-## Automacao em producao
+## Telas principais
 
-Configure as variaveis da `.env.example` na Vercel.
-
-Fluxo automatico:
-
-```txt
-Diagnostico do site -> /api/leads -> Supabase / n8n / Google Sheets / WhatsApp Cloud API
-Cron diario Vercel -> /api/cron-capture -> Supabase / n8n / Google Sheets
-```
-
-Teste apos deploy:
-
-```bash
-curl -X POST https://pc-express-ai-crm.vercel.app/api/leads \
-  -H "content-type: application/json" \
-  -d "{\"nome\":\"Teste\",\"telefone\":\"34984033975\",\"consent\":true,\"problema\":\"PC lento\",\"recomendacao\":\"Formatacao + otimizacao\"}"
-```
-
-Para Google Sheets, use o arquivo `google-apps-script-webhook.js` em uma planilha publicada como Web App e configure a URL como `GOOGLE_APPS_SCRIPT_URL`.
-
-## Cockpit de venda
-
-A tela `Cockpit` nao embute telefones no deploy. Ela pode importar um CSV manualmente ou puxar automaticamente a fila pela ponte local:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\iniciar-ponte-leads-pc-express.ps1" -CsvPath "..\ataque-hoje-telefone-pronto.csv"
-```
-
-Com a ponte ativa, o cockpit sincroniza `http://127.0.0.1:8787/leads`, carrega os leads no navegador e preserva:
-
-- status por telefone: novo, enviado, respondeu, orcamento, fechado, perdido e pulado;
-- anti-repeticao para nao trabalhar o mesmo lead como novo depois do contato;
-- cadencia de 6 minutos apos mensagem enviada;
-- follow-ups assistidos de 2 horas, amanha cedo e 3 dias;
-- mensagem pronta por lead e botao para abrir WhatsApp.
+| Rota | Papel |
+| --- | --- |
+| `/` | Landing page comercial |
+| `/diagnostico` | Formulario de diagnostico do cliente |
+| `/resultado` | Recomendacao gerada pelo diagnostico |
+| `/admin` | Painel simples de leads |
+| `/automacao` | Checagem de integracoes e captura automatica |
+| `/cockpit` | Modo venda hoje com fila de WhatsApp |
 
 ## Stack
 
 - React
 - Vite
-- JavaScript
+- JavaScript ESM
 - CSS puro
 - Lucide React
+- Vercel Functions
 - LocalStorage
-- Vercel
 
 ## Estrutura
 
 ```txt
 pc-express-ai-crm/
+  api/
+    cron-capture.js
+    health.js
+    leads.js
+    whatsapp-webhook.js
+  scripts/
   src/
     assets/
     pages/
-      Home.jsx
-      Diagnostico.jsx
-      Resultado.jsx
       Admin.jsx
       Automacao.jsx
       Cockpit.jsx
+      Diagnostico.jsx
+      Home.jsx
+      Resultado.jsx
     services/
-      leads.js
-      whatsapp.js
     utils/
-      diagnosis.js
     App.jsx
     main.jsx
     styles.css
-  api/
-  scripts/
-  index.html
-  package.json
   vercel.json
-  README.md
 ```
 
-## Como Rodar
-
-Instale as dependencias:
+## Como rodar localmente
 
 ```bash
 npm install
-```
-
-Rode o projeto:
-
-```bash
 npm run dev
 ```
 
@@ -143,60 +108,44 @@ Acesse:
 http://127.0.0.1:5173
 ```
 
-## Build
+Build:
 
 ```bash
 npm run build
 ```
 
-## Deploy
+## Automacoes e ambiente
 
-O projeto esta configurado para Vercel:
+As integracoes sao ativadas por variaveis de ambiente na Vercel. Sem essas variaveis, o app continua funcionando localmente com `localStorage`, mas as automacoes externas ficam pendentes.
 
-```bash
-npx vercel --prod
-```
+Integracoes previstas:
 
-Configuracao usada:
+- Supabase CRM
+- n8n webhook
+- Google Sheets via Apps Script
+- WhatsApp Cloud API
+- Cron secret para captacao automatica
 
-```json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite"
-}
-```
+## Cockpit de venda
 
-## Regra de Diagnostico
-
-A logica principal fica em:
+O cockpit pode importar CSV manualmente ou consumir uma ponte local em:
 
 ```txt
-src/utils/diagnosis.js
+http://127.0.0.1:8787/leads
 ```
 
-Exemplo de decisao:
+Ele preserva status por telefone, evita retrabalho de leads ja abordados e cria follow-ups assistidos.
 
-```js
-if (hasHd && slow) {
-  return {
-    problem: 'Lentidao causada por HD e inicializacao pesada',
-    recommendation: 'Upgrade para SSD + otimizacao do Windows',
-  };
-}
-```
+## Roadmap
 
-## Proximos Passos
-
-- Backend com Node.js + Express.
-- Banco PostgreSQL.
-- Prisma ORM.
 - Login no painel admin.
+- Banco de dados real para leads.
 - Dashboard com metricas de conversao.
 - Historico de atendimentos.
 - Orcamento automatico.
-- Integracao com OpenAI API para diagnostico em linguagem natural.
+- Diagnostico com IA em linguagem natural.
+- Integracao completa com WhatsApp Cloud API.
 
-## Autor
+## Status
 
-Projeto criado para a **PC Express** como MVP comercial, portfolio e base para evolucao em CRM real.
+MVP funcional publicado na Vercel e em evolucao para CRM real da PC Express.
