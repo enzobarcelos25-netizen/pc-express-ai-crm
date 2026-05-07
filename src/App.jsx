@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Admin } from './pages/Admin.jsx';
+import { Automacao } from './pages/Automacao.jsx';
 import { Diagnostico } from './pages/Diagnostico.jsx';
 import { Home } from './pages/Home.jsx';
 import { Resultado } from './pages/Resultado.jsx';
@@ -10,6 +11,7 @@ const pages = {
   diagnostico: Diagnostico,
   resultado: Resultado,
   admin: Admin,
+  automacao: Automacao,
 };
 
 export default function App() {
@@ -24,6 +26,7 @@ export default function App() {
       goHome: () => setRoute('home'),
       goDiagnostic: () => setRoute('diagnostico'),
       goAdmin: () => setRoute('admin'),
+      goAutomation: () => setRoute('automacao'),
       finishDiagnostic: (result) => {
         setDiagnosis(result);
         setLeadCount(getLeads().length);
@@ -52,6 +55,9 @@ export default function App() {
           <button type="button" onClick={nav.goAdmin}>
             Admin
             {leadCount > 0 && <span className="badge">{leadCount}</span>}
+          </button>
+          <button type="button" onClick={nav.goAutomation}>
+            Automacao
           </button>
         </nav>
       </header>

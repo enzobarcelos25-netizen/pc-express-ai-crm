@@ -40,8 +40,32 @@ Deploy em producao:
 - Painel admin com leads.
 - Status do lead: `novo`, `contato`, `fechado`.
 - Persistencia local com `localStorage`.
+- API Vercel em `/api/leads` para sincronizar leads com Supabase, n8n, Google Sheets e WhatsApp Cloud API.
+- Captura publica automatica em `/api/cron-capture`, agendada no `vercel.json`.
+- Tela `Automacao` para checar integracoes e rodar captura de teste.
 - Design responsivo.
 - Assets reais da loja usados como prova social.
+
+## Automacao em producao
+
+Configure as variaveis da `.env.example` na Vercel.
+
+Fluxo automatico:
+
+```txt
+Diagnostico do site -> /api/leads -> Supabase / n8n / Google Sheets / WhatsApp Cloud API
+Cron diario Vercel -> /api/cron-capture -> Supabase / n8n / Google Sheets
+```
+
+Teste apos deploy:
+
+```bash
+curl -X POST https://pc-express-ai-crm.vercel.app/api/leads \
+  -H "content-type: application/json" \
+  -d "{\"nome\":\"Teste\",\"telefone\":\"34984033975\",\"consent\":true,\"problema\":\"PC lento\",\"recomendacao\":\"Formatacao + otimizacao\"}"
+```
+
+Para Google Sheets, use o arquivo `google-apps-script-webhook.js` em uma planilha publicada como Web App e configure a URL como `GOOGLE_APPS_SCRIPT_URL`.
 
 ## Stack
 

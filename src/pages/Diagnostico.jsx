@@ -12,14 +12,15 @@ const initialForm = {
   virusPopups: 'nao',
   precisaOffice: 'nao',
   uso: 'basico',
+  consent: false,
 };
 
 export function Diagnostico({ nav }) {
   const [form, setForm] = useState(initialForm);
 
   function updateField(event) {
-    const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+    const { name, type, checked, value } = event.target;
+    setForm((current) => ({ ...current, [name]: type === 'checkbox' ? checked : value }));
   }
 
   function submit(event) {
@@ -30,7 +31,9 @@ export function Diagnostico({ nav }) {
       telefone: form.telefone.trim(),
       problema: result.problem,
       recomendacao: result.recommendation,
+      explicacao: result.explanation,
       status: 'novo',
+      consent: form.consent,
       answers: form,
     });
 
@@ -130,6 +133,22 @@ export function Diagnostico({ nav }) {
             ['jogos', 'Jogos'],
           ]}
         />
+
+        <label
+          style={{
+            alignItems: 'flex-start',
+            background: 'rgba(124, 255, 107, 0.08)',
+            border: '1px solid rgba(124, 255, 107, 0.2)',
+            borderRadius: 8,
+            display: 'flex',
+            gap: 10,
+            gridColumn: '1 / -1',
+            padding: 12,
+          }}
+        >
+          <input name="consent" type="checkbox" checked={form.consent} onChange={updateField} />
+          <span>Aceito receber contato da PC Express pelo WhatsApp sobre este diagnostico.</span>
+        </label>
 
         <button className="primary-button form-submit" type="submit">
           Gerar resultado
