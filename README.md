@@ -22,7 +22,7 @@ O projeto transforma a captacao manual de clientes de manutencao de computadores
 
 Deploy em producao:
 
-[https://documenta-o-t-cnica-pc-express.vercel.app](https://documenta-o-t-cnica-pc-express.vercel.app)
+[https://pc-express-ai-crm.vercel.app](https://pc-express-ai-crm.vercel.app)
 
 ## Funcionalidades
 
@@ -43,7 +43,7 @@ Deploy em producao:
 - API Vercel em `/api/leads` para sincronizar leads com Supabase, n8n, Google Sheets e WhatsApp Cloud API.
 - Captura publica automatica em `/api/cron-capture`, agendada no `vercel.json`.
 - Tela `Automacao` para checar integracoes e rodar captura de teste.
-- Tela `Cockpit` para importar CSV de leads, montar fila de WhatsApp e controlar cadencia localmente.
+- Tela `Cockpit` com Modo Venda Hoje, ponte local automatica, anti-repeticao, funil comercial e follow-ups assistidos.
 - Design responsivo.
 - Assets reais da loja usados como prova social.
 
@@ -70,7 +70,19 @@ Para Google Sheets, use o arquivo `google-apps-script-webhook.js` em uma planilh
 
 ## Cockpit de venda
 
-A tela `Cockpit` nao embute telefones no deploy. Importe o CSV `ataque-hoje-telefone-pronto.csv` no navegador para carregar a fila. Os dados ficam no `localStorage` do navegador, com mensagem pronta, link para WhatsApp, controle de enviado/pulado e cadencia de 6 minutos.
+A tela `Cockpit` nao embute telefones no deploy. Ela pode importar um CSV manualmente ou puxar automaticamente a fila pela ponte local:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\iniciar-ponte-leads-pc-express.ps1" -CsvPath "..\ataque-hoje-telefone-pronto.csv"
+```
+
+Com a ponte ativa, o cockpit sincroniza `http://127.0.0.1:8787/leads`, carrega os leads no navegador e preserva:
+
+- status por telefone: novo, enviado, respondeu, orcamento, fechado, perdido e pulado;
+- anti-repeticao para nao trabalhar o mesmo lead como novo depois do contato;
+- cadencia de 6 minutos apos mensagem enviada;
+- follow-ups assistidos de 2 horas, amanha cedo e 3 dias;
+- mensagem pronta por lead e botao para abrir WhatsApp.
 
 ## Stack
 
@@ -86,25 +98,29 @@ A tela `Cockpit` nao embute telefones no deploy. Importe o CSV `ataque-hoje-tele
 
 ```txt
 pc-express-ai-crm/
-├── src/
-│   ├── assets/
-│   ├── pages/
-│   │   ├── Home.jsx
-│   │   ├── Diagnostico.jsx
-│   │   ├── Resultado.jsx
-│   │   └── Admin.jsx
-│   ├── services/
-│   │   ├── leads.js
-│   │   └── whatsapp.js
-│   ├── utils/
-│   │   └── diagnosis.js
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── styles.css
-├── index.html
-├── package.json
-├── vercel.json
-└── README.md
+  src/
+    assets/
+    pages/
+      Home.jsx
+      Diagnostico.jsx
+      Resultado.jsx
+      Admin.jsx
+      Automacao.jsx
+      Cockpit.jsx
+    services/
+      leads.js
+      whatsapp.js
+    utils/
+      diagnosis.js
+    App.jsx
+    main.jsx
+    styles.css
+  api/
+  scripts/
+  index.html
+  package.json
+  vercel.json
+  README.md
 ```
 
 ## Como Rodar
