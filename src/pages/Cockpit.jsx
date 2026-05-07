@@ -1,8 +1,9 @@
-import { CheckCircle2, Copy, FileUp, MapPin, MessageCircle, RotateCcw, SkipForward } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Copy, FileUp, MapPin, MessageCircle, RefreshCw, RotateCcw, SkipForward } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const STORAGE_KEY = 'pc-express-cockpit-v1';
 const DEFAULT_INTERVAL_MS = 6 * 60 * 1000;
+const LOCAL_BRIDGE_URL = 'http://127.0.0.1:8787/leads';
 
 const styles = {
   layout: {
@@ -201,10 +202,27 @@ function saveState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function normalizeLeads(items) {
+  return items
+    .map((item) => ({
+      ...item,
+      telefone_digits: normalizePhone(item.telefone_digits || item.telefone || item.whatsapp || item.phone),
+      mensagem: buildMessage(item),
+    }))
+    .filter((item) => item.nome && item.telefone_digits)
+    .sort((a, b) => Number(b.prioridade || b.score || 0) - Number(a.prioridade || a.score || 0));
+}
+
+function leadSignature(leads) {
+  return leads.map((item) => `${item.nome}:${item.telefone_digits}`).join('|');
+}
+
 export function Cockpit() {
   const [state, setState] = useState(loadState);
   const [message, setMessage] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [syncStatus, setSyncStatus] = useState('Ponte local aguardando');
+  const stateRef = useRef(state);
 
   const lead = state.leads[Math.min(state.index, Math.max(state.leads.length - 1, 0))] || null;
   const sentCount = Object.keys(state.sent || {}).length;
@@ -227,24 +245,85 @@ export function Cockpit() {
     setMessage(lead ? buildMessage(lead) : '');
   }, [lead]);
 
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    loadFromLocalBridge({ quiet: true });
+    const syncTimer = window.setInterval(() => loadFromLocalBridge({ quiet: true }), 60000);
+    return () => window.clearInterval(syncTimer);
+  }, []);
+
   function updateState(next) {
     setState(next);
     saveState(next);
+  }
+
+  function applyImportedLeads(leads, sourceLabel) {
+    const currentState = stateRef.current;
+    if (!leads.length) {
+      setSyncStatus(`${sourceLabel}: nenhum lead valido`);
+      return;
+    }
+
+    const currentPhone = currentState.leads[currentState.index]?.telefone_digits;
+    const currentIndex = currentPhone ? leads.findIndex((item) => item.telefone_digits === currentPhone) : 0;
+
+    updateState({
+      ...currentState,
+      leads,
+      index: Math.max(0, currentIndex),
+      importedAt: new Date().toISOString(),
+      importedFrom: sourceLabel,
+      signature: leadSignature(leads),
+    });
+    setSyncStatus(`${sourceLabel}: ${leads.length} leads carregados`);
+  }
+
+  async function loadFromLocalBridge(options = {}) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 2500);
+
+    try {
+      const response = await fetch(LOCAL_BRIDGE_URL, {
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const payload = await response.json();
+      const leads = normalizeLeads(payload.leads || payload || []);
+      const signature = leadSignature(leads);
+      const currentState = stateRef.current;
+
+      if (signature && signature !== currentState.signature) {
+        applyImportedLeads(leads, 'Ponte local');
+      } else if (!options.quiet) {
+        setSyncStatus(`Ponte local: ${leads.length} leads ja estao carregados`);
+      }
+    } catch {
+      if (!options.quiet) setSyncStatus('Ponte local offline');
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   async function importCsv(event) {
     const file = event.target.files?.[0];
     if (!file) return;
     const text = await file.text();
-    const leads = parseCsv(text)
-      .map((item) => ({
-        ...item,
-        telefone_digits: normalizePhone(item.telefone_digits || item.telefone),
-        mensagem: buildMessage(item),
-      }))
-      .filter((item) => item.nome && item.telefone_digits)
-      .sort((a, b) => Number(b.prioridade || 0) - Number(a.prioridade || 0));
-    updateState({ leads, index: 0, sent: {}, nextAt: 0 });
+    const leads = normalizeLeads(parseCsv(text));
+    updateState({
+      leads,
+      index: 0,
+      sent: {},
+      nextAt: 0,
+      importedAt: new Date().toISOString(),
+      importedFrom: file.name,
+      signature: leadSignature(leads),
+    });
+    setSyncStatus(`${file.name}: ${leads.length} leads carregados`);
   }
 
   function markSent() {
@@ -306,11 +385,16 @@ export function Cockpit() {
             Importar CSV
             <input accept=".csv,text/csv" onChange={importCsv} style={{ display: 'none' }} type="file" />
           </label>
+          <button className="secondary-button" onClick={() => loadFromLocalBridge()} type="button">
+            <RefreshCw size={18} />
+            Sincronizar ponte
+          </button>
           <button className="secondary-button" onClick={reset} type="button">
             <RotateCcw size={18} />
             Limpar fila
           </button>
         </div>
+        <p style={styles.muted}>{syncStatus}</p>
       </div>
 
       <div style={styles.card}>
