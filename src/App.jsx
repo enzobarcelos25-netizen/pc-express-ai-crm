@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Admin } from './pages/Admin.jsx';
 import { Automacao } from './pages/Automacao.jsx';
 import { Cockpit } from './pages/Cockpit.jsx';
@@ -16,28 +16,56 @@ const pages = {
   cockpit: Cockpit,
 };
 
+const pathByRoute = {
+  home: '/',
+  diagnostico: '/diagnostico',
+  resultado: '/resultado',
+  admin: '/admin',
+  automacao: '/automacao',
+  cockpit: '/cockpit',
+};
+
+function routeFromPath() {
+  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  return Object.entries(pathByRoute).find(([, routePath]) => routePath === path)?.[0] || 'home';
+}
+
 export default function App() {
-  const [route, setRoute] = useState('home');
+  const [route, setRoute] = useState(routeFromPath);
   const [diagnosis, setDiagnosis] = useState(null);
   const [leadCount, setLeadCount] = useState(() => getLeads().length);
 
   const Page = pages[route] ?? Home;
 
+  const goRoute = useCallback((nextRoute) => {
+    setRoute(nextRoute);
+    const nextPath = pathByRoute[nextRoute] || '/';
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({}, '', nextPath);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => setRoute(routeFromPath());
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const nav = useMemo(
     () => ({
-      goHome: () => setRoute('home'),
-      goDiagnostic: () => setRoute('diagnostico'),
-      goAdmin: () => setRoute('admin'),
-      goAutomation: () => setRoute('automacao'),
-      goCockpit: () => setRoute('cockpit'),
+      goHome: () => goRoute('home'),
+      goDiagnostic: () => goRoute('diagnostico'),
+      goAdmin: () => goRoute('admin'),
+      goAutomation: () => goRoute('automacao'),
+      goCockpit: () => goRoute('cockpit'),
       finishDiagnostic: (result) => {
         setDiagnosis(result);
         setLeadCount(getLeads().length);
-        setRoute('resultado');
+        goRoute('resultado');
       },
       refreshLeads: () => setLeadCount(getLeads().length),
     }),
-    [],
+    [goRoute],
   );
 
   return (
