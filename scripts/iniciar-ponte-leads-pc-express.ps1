@@ -110,30 +110,40 @@ function Read-Leads {
   return @($leads)
 }
 
-function Write-JsonResponse {
+function Write-RawJsonResponse {
   param(
-    [System.Net.HttpListenerContext]$Context,
+    [System.IO.Stream]$Stream,
     [int]$StatusCode,
     [object]$Payload
   )
 
   $json = $Payload | ConvertTo-Json -Depth 8
-  $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
-  $response = $Context.Response
-  $response.StatusCode = $StatusCode
-  $response.ContentType = "application/json; charset=utf-8"
-  $response.ContentLength64 = $bytes.Length
-  $response.Headers["Access-Control-Allow-Origin"] = "https://pc-express-ai-crm.vercel.app"
-  $response.Headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-  $response.Headers["Access-Control-Allow-Headers"] = "Content-Type"
-  $response.OutputStream.Write($bytes, 0, $bytes.Length)
-  $response.OutputStream.Close()
+  $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+  $reason = if ($StatusCode -eq 200) { "OK" } elseif ($StatusCode -eq 204) { "No Content" } elseif ($StatusCode -eq 404) { "Not Found" } else { "OK" }
+  $headers = @(
+    "HTTP/1.1 $StatusCode $reason",
+    "Content-Type: application/json; charset=utf-8",
+    "Content-Length: $($bodyBytes.Length)",
+    "Access-Control-Allow-Origin: https://pc-express-ai-crm.vercel.app",
+    "Access-Control-Allow-Methods: GET, OPTIONS",
+    "Access-Control-Allow-Headers: Content-Type",
+    "Access-Control-Allow-Private-Network: true",
+    "Cache-Control: no-store",
+    "Connection: close",
+    "",
+    ""
+  ) -join "`r`n"
+  $headerBytes = [System.Text.Encoding]::ASCII.GetBytes($headers)
+  $Stream.Write($headerBytes, 0, $headerBytes.Length)
+  if ($bodyBytes.Length -gt 0) {
+    $Stream.Write($bodyBytes, 0, $bodyBytes.Length)
+  }
+  $Stream.Flush()
 }
 
 $resolvedCsv = Resolve-LeadCsv $CsvPath
 $prefix = "http://127.0.0.1:$Port/"
-$listener = [System.Net.HttpListener]::new()
-$listener.Prefixes.Add($prefix)
+$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse("127.0.0.1"), $Port)
 $listener.Start()
 
 Write-Host "PC Express local lead bridge running at $prefix"
@@ -145,36 +155,53 @@ if ($resolvedCsv) {
 Write-Host "Open https://pc-express-ai-crm.vercel.app/cockpit and click Sincronizar ponte, or wait for auto sync."
 Write-Host "Press Ctrl+C to stop."
 
-while ($listener.IsListening) {
-  $context = $listener.GetContext()
-
-  if ($context.Request.HttpMethod -eq "OPTIONS") {
-    $context.Response.StatusCode = 204
-    $context.Response.Headers["Access-Control-Allow-Origin"] = "https://pc-express-ai-crm.vercel.app"
-    $context.Response.Headers["Access-Control-Allow-Methods"] = "GET, OPTIONS"
-    $context.Response.Headers["Access-Control-Allow-Headers"] = "Content-Type"
-    $context.Response.OutputStream.Close()
-    continue
-  }
-
-  $path = $context.Request.Url.AbsolutePath
-  if ($path -eq "/health") {
-    Write-JsonResponse $context 200 @{ ok = $true; csvPath = $resolvedCsv }
-    continue
-  }
-
-  if ($path -eq "/leads") {
-    $resolvedCsv = Resolve-LeadCsv $CsvPath
-    $leads = Read-Leads $resolvedCsv
-    Write-JsonResponse $context 200 @{
-      ok = $true
-      csvPath = $resolvedCsv
-      count = $leads.Count
-      updatedAt = (Get-Date).ToString("o")
-      leads = $leads
+while ($true) {
+  $client = $listener.AcceptTcpClient()
+  try {
+    $stream = $client.GetStream()
+    $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::ASCII, $false, 1024, $true)
+    $requestLine = $reader.ReadLine()
+    while ($true) {
+      $line = $reader.ReadLine()
+      if ($null -eq $line -or $line -eq "") {
+        break
+      }
     }
-    continue
-  }
 
-  Write-JsonResponse $context 404 @{ ok = $false; error = "not_found" }
+    if (!$requestLine) {
+      Write-RawJsonResponse $stream 400 @{ ok = $false; error = "bad_request" }
+      continue
+    }
+
+    $parts = $requestLine.Split(" ")
+    $method = $parts[0]
+    $path = ($parts[1] -split "\?")[0]
+
+    if ($method -eq "OPTIONS") {
+      Write-RawJsonResponse $stream 204 @{}
+      continue
+    }
+
+    if ($path -eq "/health") {
+      Write-RawJsonResponse $stream 200 @{ ok = $true; csvPath = $resolvedCsv }
+      continue
+    }
+
+    if ($path -eq "/leads") {
+      $resolvedCsv = Resolve-LeadCsv $CsvPath
+      $leads = Read-Leads $resolvedCsv
+      Write-RawJsonResponse $stream 200 @{
+        ok = $true
+        csvPath = $resolvedCsv
+        count = $leads.Count
+        updatedAt = (Get-Date).ToString("o")
+        leads = $leads
+      }
+      continue
+    }
+
+    Write-RawJsonResponse $stream 404 @{ ok = $false; error = "not_found" }
+  } finally {
+    $client.Close()
+  }
 }
