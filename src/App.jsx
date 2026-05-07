@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Admin } from './pages/Admin.jsx';
 import { Automacao } from './pages/Automacao.jsx';
+import { Cockpit } from './pages/Cockpit.jsx';
 import { Diagnostico } from './pages/Diagnostico.jsx';
 import { Home } from './pages/Home.jsx';
 import { Resultado } from './pages/Resultado.jsx';
@@ -12,6 +13,7 @@ const pages = {
   resultado: Resultado,
   admin: Admin,
   automacao: Automacao,
+  cockpit: Cockpit,
 };
 
 export default function App() {
@@ -27,6 +29,7 @@ export default function App() {
       goDiagnostic: () => setRoute('diagnostico'),
       goAdmin: () => setRoute('admin'),
       goAutomation: () => setRoute('automacao'),
+      goCockpit: () => setRoute('cockpit'),
       finishDiagnostic: (result) => {
         setDiagnosis(result);
         setLeadCount(getLeads().length);
@@ -58,6 +61,9 @@ export default function App() {
           </button>
           <button type="button" onClick={nav.goAutomation}>
             Automacao
+          </button>
+          <button type="button" onClick={nav.goCockpit}>
+            Cockpit
           </button>
         </nav>
       </header>
